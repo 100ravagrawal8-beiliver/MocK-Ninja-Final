@@ -2184,6 +2184,9 @@ function BookingModal({ onClose }) {
     preferredDate: "", preferredTime: "", preferredTimes: [], timezone: "IST (UTC+5:30)",
     resume: null, notes: "",
     selectedInterviewer: null,
+    showAllInterviewers: false,
+    preferredSlots: [{}, {}, {}],
+    expandedSlot: 0,
   });
   const [aiMatching, setAiMatching] = useState(false);
   const [aiMatchResults, setAiMatchResults] = useState(null);
@@ -2235,7 +2238,7 @@ function BookingModal({ onClose }) {
     if (step === 2) return form.company && form.designation && form.industry && form.experience;
     if (step === 3) return form.targetSchools.length > 0 && form.appRound;
     if (step === 3.5) return !!form.selectedInterviewer;
-    if (step === 4) return form.preferredDate && form.preferredTimes && form.preferredTimes.length >= 1;
+    if (step === 4) return (form.preferredSlots || []).some(s => s.date && s.time);
     return true;
   };
 
@@ -2656,7 +2659,7 @@ function BookingModal({ onClose }) {
                   {/* Choose someone else */}
                   <div style={{ textAlign: "center", marginTop: 4 }}>
                     <button
-                      onClick={() => handleRefreshInterviewers()}
+                      onClick={() => update("showAllInterviewers", !form.showAllInterviewers)}
                       style={{
                         background: "transparent", border: "1px solid #334155", borderRadius: 8,
                         padding: "8px 20px", color: "#94A3B8", cursor: "pointer",
@@ -2666,9 +2669,62 @@ function BookingModal({ onClose }) {
                       onMouseEnter={(e) => { e.target.style.borderColor = "#C9A84C"; e.target.style.color = "#C9A84C"; }}
                       onMouseLeave={(e) => { e.target.style.borderColor = "#334155"; e.target.style.color = "#94A3B8"; }}
                     >
-                      ↻ Show me different interviewers
+                      {form.showAllInterviewers ? "▲ Hide full list" : "☰ Choose someone else"}
                     </button>
                   </div>
+
+                  {/* Full interviewer list */}
+                  {form.showAllInterviewers && (
+                    <div style={{ marginTop: 14, animation: "fadeIn 0.3s ease" }}>
+                      <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 12, color: "#94A3B8", marginBottom: 10 }}>
+                        All available interviewers — tap to select
+                      </div>
+                      {[
+                        { name: "Rajesh Mehta", school: "IIM Ahmedabad", company: "Ex-McKinsey", rating: "4.9", sessions: 120, specialty: "Consulting & Strategy", tags: ["IIM A", "Strategy", "Leadership"] },
+                        { name: "Priya Kapoor", school: "ISB", company: "Ex-BCG", rating: "4.8", sessions: 95, specialty: "FMCG & Banking", tags: ["ISB", "FMCG", "Career switch"] },
+                        { name: "Amit Sharma", school: "IIM Bangalore", company: "Ex-Bain", rating: "4.9", sessions: 110, specialty: "Finance & Banking", tags: ["IIM B", "Finance", "Bain"] },
+                        { name: "Neha Reddy", school: "IIM Calcutta", company: "Ex-Deloitte", rating: "4.8", sessions: 88, specialty: "IT & Consulting", tags: ["IIM C", "IT", "XLRI"] },
+                        { name: "Vikram Joshi", school: "XLRI", company: "Ex-Goldman Sachs", rating: "4.7", sessions: 75, specialty: "Finance & Leadership", tags: ["XLRI", "Finance", "ISB"] },
+                        { name: "Sneha Iyer", school: "IIM Indore", company: "Ex-Amazon", rating: "4.9", sessions: 102, specialty: "Tech & E-commerce", tags: ["IIM I", "Tech", "Product"] },
+                        { name: "Karthik Raman", school: "IIM Ahmedabad", company: "Ex-McKinsey", rating: "4.8", sessions: 91, specialty: "Consulting to Startup", tags: ["IIM A", "Startup", "Strategy"] },
+                        { name: "Ananya Desai", school: "ISB", company: "Ex-EY Parthenon", rating: "4.7", sessions: 68, specialty: "Healthcare & Manufacturing", tags: ["ISB", "Healthcare", "XLRI"] },
+                      ].map((iv) => {
+                        const isSelected = form.selectedInterviewer && form.selectedInterviewer.name === iv.name;
+                        return (
+                          <div
+                            key={iv.name}
+                            onClick={() => { update("selectedInterviewer", { ...iv, score: null, why: null, prepTip: null }); update("showAllInterviewers", false); }}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 12,
+                              padding: "12px 14px", borderRadius: 10, cursor: "pointer", marginBottom: 8,
+                              border: isSelected ? "1.5px solid #C9A84C" : "1px solid #334155",
+                              background: isSelected ? "rgba(201,168,76,0.08)" : "#1A2A44",
+                              transition: "all 0.2s",
+                            }}
+                          >
+                            <div style={{
+                              width: 40, height: 40, borderRadius: "50%", flexShrink: 0,
+                              background: "linear-gradient(135deg, #C9A84C, #1A2A44)",
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              fontFamily: "'Inter',sans-serif", fontSize: 14, fontWeight: 700, color: "#fff",
+                            }}>{iv.name.split(" ").map(w => w[0]).join("").slice(0,2)}</div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 600, color: "#F5F5F0" }}>{iv.name}</div>
+                              <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 11, color: "#94A3B8", marginTop: 2 }}>
+                                {iv.school} · {iv.company} · ★ {iv.rating} · {iv.sessions} sessions
+                              </div>
+                              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 5 }}>
+                                {iv.tags.map(tag => (
+                                  <span key={tag} style={{ padding: "2px 8px", borderRadius: 20, background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.2)", fontFamily: "'Inter',sans-serif", fontSize: 10, color: "#C9A84C" }}>{tag}</span>
+                                ))}
+                              </div>
+                            </div>
+                            {isSelected && <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 11, color: "#C9A84C", fontWeight: 600 }}>✓</div>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -2677,103 +2733,147 @@ function BookingModal({ onClose }) {
           {/* STEP 4 — Schedule Your Session */}
           {step === 4 && (
             <div style={{ animation: "fadeIn 0.3s ease" }}>
-              <div style={sty.fieldGroup}>
-                <label style={sty.label}>Preferred Date *</label>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
-                  {dates.map((d) => {
-                    const key = d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-                    const dayName = d.toLocaleDateString("en-IN", { weekday: "short" });
-                    const isActive = form.preferredDate === key;
-                    return (
-                      <div
-                        key={key}
-                        onClick={() => update("preferredDate", key)}
-                        style={{
-                          padding: "8px 4px", borderRadius: 10, cursor: "pointer", textAlign: "center",
-                          border: isActive ? "1.5px solid #C9A84C" : "1px solid #334155",
-                          background: isActive ? "rgba(201,168,76,0.1)" : "#1A2A44",
-                          transition: "all 0.2s",
-                        }}
-                      >
-                        <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 10, color: "#94A3B8" }}>{dayName}</div>
-                        <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 14, fontWeight: 600, color: isActive ? "#C9A84C" : "#F5F5F0", marginTop: 2 }}>
-                          {d.getDate()}
-                        </div>
-                        <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 9, color: "#64748B", marginTop: 1 }}>
-                          {d.toLocaleDateString("en-IN", { month: "short" })}
+              <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, color: "#94A3B8", marginBottom: 16 }}>
+                Add up to <span style={{ color: "#C9A84C", fontWeight: 600 }}>3 preferred slots</span> — each with its own date and time.
+              </div>
+
+              {[0, 1, 2].map((slotIdx) => {
+                const slot = (form.preferredSlots || [])[slotIdx] || {};
+                const isAdded = slot.date && slot.time;
+                const isExpanded = form.expandedSlot === slotIdx;
+                const totalSlots = (form.preferredSlots || []).filter(s => s.date && s.time).length;
+                const canAdd = slotIdx === 0 || ((form.preferredSlots || [])[slotIdx - 1] && (form.preferredSlots || [])[slotIdx - 1].date);
+
+                return (
+                  <div key={slotIdx} style={{ marginBottom: 12 }}>
+                    {/* Slot header */}
+                    <div
+                      onClick={() => { if (canAdd) update("expandedSlot", isExpanded ? -1 : slotIdx); }}
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        padding: "12px 14px", borderRadius: 10, cursor: canAdd ? "pointer" : "default",
+                        border: isAdded ? "1.5px solid #C9A84C" : isExpanded ? "1.5px solid #334155" : "1px dashed #334155",
+                        background: isAdded ? "rgba(201,168,76,0.06)" : "#1A2A44",
+                        opacity: canAdd ? 1 : 0.4,
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{
+                          width: 24, height: 24, borderRadius: "50%", flexShrink: 0,
+                          background: isAdded ? "#C9A84C" : "#334155",
+                          color: isAdded ? "#0F1B2D" : "#94A3B8",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontFamily: "'Inter',sans-serif", fontSize: 12, fontWeight: 700,
+                        }}>{slotIdx + 1}</div>
+                        <div>
+                          {isAdded ? (
+                            <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, color: "#F5F5F0", fontWeight: 600 }}>
+                              {slot.date} &nbsp;·&nbsp; {slot.time}
+                            </div>
+                          ) : (
+                            <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, color: "#64748B" }}>
+                              {slotIdx === 0 ? "Add your 1st preference" : slotIdx === 1 ? "Add your 2nd preference" : "Add your 3rd preference"}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-              <div style={sty.fieldGroup}>
-                <label style={sty.label}>
-                  Preferred Time Slots * <span style={{ color: "#94A3B8", fontWeight: 400 }}>— Select up to 3 preferences</span>
-                </label>
-                <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 11, color: "#64748B", marginBottom: 8 }}>
-                  {form.preferredTimes && form.preferredTimes.length > 0
-                    ? form.preferredTimes.length + " of 3 selected"
-                    : "Pick your preferred time slots in order of preference"}
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-                  {TIME_SLOTS.map((t, i) => {
-                    const times = form.preferredTimes || [];
-                    const selectedIdx = times.indexOf(t);
-                    const isSelected = selectedIdx !== -1;
-                    const isFull = times.length >= 3 && !isSelected;
-                    return (
-                      <div
-                        key={t}
-                        onClick={() => {
-                          if (isSelected) {
-                            update("preferredTimes", times.filter(x => x !== t));
-                            update("preferredTime", times.filter(x => x !== t)[0] || "");
-                          } else if (!isFull) {
-                            const updated = [...times, t];
-                            update("preferredTimes", updated);
-                            update("preferredTime", updated[0]);
-                          }
-                        }}
-                        style={{
-                          padding: "10px 8px", borderRadius: 10, cursor: isFull ? "not-allowed" : "pointer",
-                          border: isSelected ? "1.5px solid #C9A84C" : "1px solid #334155",
-                          background: isSelected ? "rgba(201,168,76,0.1)" : isFull ? "rgba(26,42,68,0.5)" : "#1A2A44",
-                          color: isSelected ? "#C9A84C" : isFull ? "#475569" : "#F5F5F0",
-                          fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 500,
-                          textAlign: "center", transition: "all 0.2s", position: "relative",
-                          opacity: isFull ? 0.5 : 1,
-                        }}
-                      >
-                        {isSelected && (
-                          <div style={{
-                            position: "absolute", top: -8, right: -4,
-                            background: "#C9A84C", color: "#0F1B2D",
-                            borderRadius: "50%", width: 18, height: 18,
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            fontFamily: "'Inter',sans-serif", fontSize: 10, fontWeight: 700,
-                          }}>{selectedIdx + 1}</div>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        {isAdded && (
+                          <div
+                            onClick={(e) => { e.stopPropagation(); const slots = [...(form.preferredSlots || [])]; slots[slotIdx] = {}; update("preferredSlots", slots); update("preferredDate", slots[0] && slots[0].date ? slots[0].date : ""); update("preferredTime", slots[0] && slots[0].time ? slots[0].time : ""); }}
+                            style={{ fontFamily: "'Inter',sans-serif", fontSize: 11, color: "#EF4444", cursor: "pointer", padding: "2px 8px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.3)" }}
+                          >✕ Remove</div>
                         )}
-                        {t}
-                        {i === 1 && <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 9, color: "#E0BF65", marginTop: 2 }}>2 spots left</div>}
+                        <div style={{ color: "#94A3B8", fontSize: 14 }}>{isExpanded ? "▲" : "▼"}</div>
                       </div>
-                    );
-                  })}
-                </div>
-                {form.preferredTimes && form.preferredTimes.length > 0 && (
-                  <div style={{ marginTop: 10, padding: "8px 12px", background: "rgba(201,168,76,0.06)", borderRadius: 8, border: "1px solid rgba(201,168,76,0.2)" }}>
-                    <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 11, color: "#C9A84C", marginBottom: 4 }}>Your preferences (in order):</div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      {form.preferredTimes.map((t, i) => (
-                        <span key={t} style={{ fontFamily: "'Inter',sans-serif", fontSize: 12, color: "#F5F5F0" }}>
-                          {i + 1}. {t}
-                        </span>
-                      ))}
                     </div>
+
+                    {/* Expanded picker */}
+                    {isExpanded && canAdd && (
+                      <div style={{ padding: "14px", background: "#0F1B2D", borderRadius: "0 0 10px 10px", border: "1px solid #334155", borderTop: "none" }}>
+                        {/* Date picker */}
+                        <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 11, color: "#94A3B8", marginBottom: 8 }}>Select Date</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 5, marginBottom: 14 }}>
+                          {dates.map((d) => {
+                            const key = d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+                            const dayName = d.toLocaleDateString("en-IN", { weekday: "short" });
+                            const isActive = slot.date === key;
+                            return (
+                              <div
+                                key={key}
+                                onClick={() => {
+                                  const slots = [...(form.preferredSlots || [{},{},{}])];
+                                  while (slots.length < 3) slots.push({});
+                                  slots[slotIdx] = { ...slots[slotIdx], date: key };
+                                  update("preferredSlots", slots);
+                                }}
+                                style={{
+                                  padding: "6px 2px", borderRadius: 8, cursor: "pointer", textAlign: "center",
+                                  border: isActive ? "1.5px solid #C9A84C" : "1px solid #1A2A44",
+                                  background: isActive ? "rgba(201,168,76,0.12)" : "#1A2A44",
+                                  transition: "all 0.15s",
+                                }}
+                              >
+                                <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 9, color: "#64748B" }}>{dayName}</div>
+                                <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 600, color: isActive ? "#C9A84C" : "#F5F5F0" }}>{d.getDate()}</div>
+                                <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 8, color: "#64748B" }}>{d.toLocaleDateString("en-IN", { month: "short" })}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {/* Time picker */}
+                        <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 11, color: "#94A3B8", marginBottom: 8 }}>Select Time</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+                          {TIME_SLOTS.map((t, i) => {
+                            const isActive = slot.time === t;
+                            return (
+                              <div
+                                key={t}
+                                onClick={() => {
+                                  const slots = [...(form.preferredSlots || [{},{},{}])];
+                                  while (slots.length < 3) slots.push({});
+                                  slots[slotIdx] = { ...slots[slotIdx], time: t };
+                                  update("preferredSlots", slots);
+                                  update("preferredDate", slots[0] && slots[0].date ? slots[0].date : "");
+                                  update("preferredTime", slots[0] && slots[0].time ? slots[0].time : "");
+                                  // auto-close if both date and time selected
+                                  if (slots[slotIdx].date) update("expandedSlot", -1);
+                                }}
+                                style={{
+                                  padding: "8px 4px", borderRadius: 8, cursor: "pointer", textAlign: "center",
+                                  border: isActive ? "1.5px solid #C9A84C" : "1px solid #1A2A44",
+                                  background: isActive ? "rgba(201,168,76,0.12)" : "#1A2A44",
+                                  fontFamily: "'Inter',sans-serif", fontSize: 12, fontWeight: 500,
+                                  color: isActive ? "#C9A84C" : "#F5F5F0",
+                                  transition: "all 0.15s",
+                                }}
+                              >
+                                {t}
+                                {i === 1 && <div style={{ fontSize: 8, color: "#E0BF65", marginTop: 2 }}>2 spots left</div>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <div style={sty.fieldGroup}>
+                );
+              })}
+
+              {/* Summary */}
+              {(form.preferredSlots || []).some(s => s.date && s.time) && (
+                <div style={{ marginTop: 4, padding: "10px 14px", background: "rgba(201,168,76,0.06)", borderRadius: 8, border: "1px solid rgba(201,168,76,0.2)" }}>
+                  <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 11, color: "#C9A84C", marginBottom: 6 }}>Your preferences (in order):</div>
+                  {(form.preferredSlots || []).filter(s => s.date && s.time).map((s, i) => (
+                    <div key={i} style={{ fontFamily: "'Inter',sans-serif", fontSize: 12, color: "#F5F5F0", marginBottom: 3 }}>
+                      {i + 1}. {s.date} &nbsp;·&nbsp; {s.time}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ ...sty.fieldGroup, marginTop: 14 }}>
                 <label style={sty.label}>Time Zone</label>
                 <div style={{ ...sty.input, color: "#94A3B8", cursor: "default" }}>IST (UTC+5:30) — Auto-detected</div>
               </div>
@@ -2830,11 +2930,9 @@ function BookingModal({ onClose }) {
                   )}
                   <div><span style={{ color: "#94A3B8" }}>Date: </span><span style={{ color: "#C9A84C" }}>{form.preferredDate}</span></div>
                   <div style={{ gridColumn: "1/-1" }}>
-                    <span style={{ color: "#94A3B8" }}>Preferred Times: </span>
+                    <span style={{ color: "#94A3B8" }}>Preferred Slots: </span>
                     <span style={{ color: "#C9A84C" }}>
-                      {form.preferredTimes && form.preferredTimes.length > 0
-                        ? form.preferredTimes.map((t, i) => (i+1) + ". " + t).join("  |  ")
-                        : form.preferredTime}
+                      {(form.preferredSlots || []).filter(s => s.date && s.time).map((s, i) => (i+1) + ". " + s.date + " " + s.time).join("  |  ")}
                     </span>
                   </div>
                 </div>
