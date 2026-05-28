@@ -2201,7 +2201,7 @@ function BookingModal({ onClose }) {
     try {
       const profileStr = (form.designation || "") + " at " + (form.company || "") + ", industry: " + (form.industry || "") + ", targets: " + (form.targetSchools || []).join(", ");
       const prompt = "You are an expert MBA interview coach. Suggest 3 different mock interviewers for: " + profileStr + ". Panelists: Rajesh Mehta IIM-A McKinsey, Priya Kapoor ISB BCG, Amit Sharma IIM-B Bain, Neha Reddy IIM-C Deloitte, Vikram Joshi XLRI Goldman, Sneha Iyer IIM-I Amazon, Karthik Raman IIM-A Flipkart, Ananya Desai ISB EY. Respond ONLY with raw JSON no markdown. Schema: matches array, each item has rank name score badge school company rating sessions specialty why prepTip tags.";
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      const resp = await fetch("/api/match", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -2907,7 +2907,7 @@ Respond ONLY in this exact JSON format, no markdown, no preamble:
   ]
 }`;
 
-                      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+                      const resp = await fetch("/api/match", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
