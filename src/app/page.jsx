@@ -2340,6 +2340,7 @@ function BookingModal({ onClose }) {
               />
             ))}
           </div>
+          <img src={LOGO_SRC} alt="MockNinja" style={{ height: 72, display: "block", margin: "0 auto 20px" }} />
           <div style={{ fontSize: 56, marginBottom: 16, animation: "pulse 1.5s ease infinite" }}>✓</div>
           <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 32, fontWeight: 700, color: "#F5F5F0", marginBottom: 12 }}>
             You're All Set!
@@ -2661,15 +2662,15 @@ function BookingModal({ onClose }) {
                     <button
                       onClick={() => update("showAllInterviewers", !form.showAllInterviewers)}
                       style={{
-                        background: "transparent", border: "1px solid #334155", borderRadius: 8,
-                        padding: "8px 20px", color: "#94A3B8", cursor: "pointer",
-                        fontFamily: "'Inter',sans-serif", fontSize: 13,
+                        background: "transparent", border: "1.5px solid #F5F5F0", borderRadius: 8,
+                        padding: "10px 24px", color: "#F5F5F0", cursor: "pointer",
+                        fontFamily: "'Inter',sans-serif", fontSize: 15, fontWeight: 700,
                         transition: "all 0.2s",
                       }}
                       onMouseEnter={(e) => { e.target.style.borderColor = "#C9A84C"; e.target.style.color = "#C9A84C"; }}
-                      onMouseLeave={(e) => { e.target.style.borderColor = "#334155"; e.target.style.color = "#94A3B8"; }}
+                      onMouseLeave={(e) => { e.target.style.borderColor = "#F5F5F0"; e.target.style.color = "#F5F5F0"; }}
                     >
-                      {form.showAllInterviewers ? "▲ Hide full list" : "☰ Choose someone else"}
+                      {form.showAllInterviewers ? "▲ Hide full list" : "☰ Choose Someone Else"}
                     </button>
                   </div>
 
