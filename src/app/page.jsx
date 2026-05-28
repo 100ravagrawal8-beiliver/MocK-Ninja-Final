@@ -9,7 +9,7 @@ const LOGO_SRC = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA+cAAAH0CAYAAABf
 // ============================================================
 
 // --- Constants ---
-const NAV_LINKS = ["How It Works", "Mentors", "Why MockNinja", "Testimonials", "FAQs"];
+const NAV_LINKS = ["How It Works", "Mentors", "Why MockNinja", "Pricing", "Testimonials", "FAQs"];
 
 const FOOTER_COLS = {
   Platform: ["How It Works", "Mentors", "Schools", "Testimonials", "Book Interview"],
@@ -1764,6 +1764,241 @@ const FAQ_ITEMS = [
   },
 ];
 
+function Pricing({ onBookClick }) {
+  const plans = [
+    {
+      id: 1,
+      name: "Solo Session",
+      tagline: "Perfect for your first mock",
+      price: 3500,
+      sessions: 1,
+      panelists: 1,
+      duration: 45,
+      highlights: [
+        "1 expert panelist",
+        "45-minute mock interview",
+        "Structured feedback scorecard",
+        "School-specific question bank",
+        "Post-interview prep tips",
+      ],
+      badge: null,
+      cta: "Book Now",
+      accent: "#C9A84C",
+    },
+    {
+      id: 2,
+      name: "Dual Panel",
+      tagline: "Closest to the real thing",
+      price: 5500,
+      sessions: 1,
+      panelists: 2,
+      duration: 45,
+      highlights: [
+        "2 expert panelists simultaneously",
+        "45-minute mock interview",
+        "Dual-perspective feedback report",
+        "Cross-questioning simulation",
+        "School-specific question bank",
+        "Priority slot booking",
+      ],
+      badge: "MOST POPULAR",
+      cta: "Book Now",
+      accent: "#10B981",
+    },
+    {
+      id: 3,
+      name: "Solo Bundle",
+      tagline: "Build consistency across rounds",
+      price: 9000,
+      originalPrice: 10500,
+      sessions: 3,
+      panelists: 1,
+      duration: 45,
+      highlights: [
+        "3 sessions × 1 panelist each",
+        "Different panelist every session",
+        "45 minutes per session",
+        "Progressive feedback tracking",
+        "Full scorecard for each session",
+        "Saves ₹1,500 vs individual",
+      ],
+      badge: "SAVE ₹1,500",
+      cta: "Book Bundle",
+      accent: "#C9A84C",
+    },
+    {
+      id: 4,
+      name: "Dual Bundle",
+      tagline: "Maximum prep, maximum confidence",
+      price: 15000,
+      originalPrice: 16500,
+      sessions: 3,
+      panelists: 2,
+      duration: 45,
+      highlights: [
+        "3 sessions × 2 panelists each",
+        "Different panel every session",
+        "45 minutes per session",
+        "6 total expert perspectives",
+        "Comprehensive progress report",
+        "Saves ₹1,500 vs individual",
+      ],
+      badge: "BEST VALUE",
+      cta: "Book Bundle",
+      accent: "#10B981",
+    },
+  ];
+
+  return (
+    <section id="Pricing" style={{ background: "#0F1B2D", padding: "80px 0" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 24px" }}>
+        {/* Header */}
+        <div style={{ textAlign: "center", marginBottom: 56 }}>
+          <div style={{
+            display: "inline-block", padding: "6px 18px", borderRadius: 20,
+            border: "1px solid rgba(201,168,76,0.4)", background: "rgba(201,168,76,0.08)",
+            fontFamily: "'Inter',sans-serif", fontSize: 12, fontWeight: 600,
+            color: "#C9A84C", letterSpacing: "1.5px", marginBottom: 16,
+          }}>PRICING</div>
+          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 38, fontWeight: 700, color: "#F5F5F0", marginBottom: 14, lineHeight: 1.2 }}>
+            Simple, Transparent Pricing
+          </h2>
+          <p style={{ fontFamily: "'Inter',sans-serif", fontSize: 16, color: "#94A3B8", maxWidth: 520, margin: "0 auto" }}>
+            No hidden fees. Pick the plan that fits your prep stage.
+          </p>
+        </div>
+
+        {/* Cards grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
+          {plans.map((plan) => (
+            <div
+              key={plan.id}
+              style={{
+                background: plan.badge === "MOST POPULAR" || plan.badge === "BEST VALUE" ? "linear-gradient(160deg, #1A2A44, #0F1B2D)" : "#1A2A44",
+                borderRadius: 16, padding: "28px 22px 24px",
+                border: plan.badge === "MOST POPULAR" || plan.badge === "BEST VALUE"
+                  ? "1.5px solid " + plan.accent
+                  : "1px solid #334155",
+                position: "relative", display: "flex", flexDirection: "column",
+                transition: "transform 0.2s, box-shadow 0.2s",
+                boxShadow: plan.badge === "MOST POPULAR" || plan.badge === "BEST VALUE"
+                  ? "0 8px 32px rgba(16,185,129,0.12)"
+                  : "none",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 16px 40px rgba(0,0,0,0.3)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = plan.badge === "MOST POPULAR" || plan.badge === "BEST VALUE" ? "0 8px 32px rgba(16,185,129,0.12)" : "none"; }}
+            >
+              {/* Badge */}
+              {plan.badge && (
+                <div style={{
+                  position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)",
+                  background: plan.accent, color: plan.accent === "#10B981" ? "#fff" : "#0F1B2D",
+                  fontFamily: "'Inter',sans-serif", fontSize: 10, fontWeight: 700,
+                  padding: "4px 14px", borderRadius: 20, letterSpacing: "0.8px", whiteSpace: "nowrap",
+                }}>{plan.badge}</div>
+              )}
+
+              {/* Plan name */}
+              <div style={{ marginBottom: 4 }}>
+                <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 18, fontWeight: 700, color: "#F5F5F0" }}>{plan.name}</div>
+                <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 12, color: "#64748B", marginTop: 4 }}>{plan.tagline}</div>
+              </div>
+
+              {/* Session info pills */}
+              <div style={{ display: "flex", gap: 6, marginTop: 12, marginBottom: 16, flexWrap: "wrap" }}>
+                <span style={{ padding: "3px 10px", borderRadius: 20, background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.25)", fontFamily: "'Inter',sans-serif", fontSize: 11, color: "#C9A84C" }}>
+                  {plan.sessions === 1 ? "1 session" : plan.sessions + " sessions"}
+                </span>
+                <span style={{ padding: "3px 10px", borderRadius: 20, background: "rgba(148,163,184,0.08)", border: "1px solid #334155", fontFamily: "'Inter',sans-serif", fontSize: 11, color: "#94A3B8" }}>
+                  {plan.panelists === 1 ? "1 panelist" : "2 panelists"}
+                </span>
+                <span style={{ padding: "3px 10px", borderRadius: 20, background: "rgba(148,163,184,0.08)", border: "1px solid #334155", fontFamily: "'Inter',sans-serif", fontSize: 11, color: "#94A3B8" }}>
+                  {plan.duration} min
+                </span>
+              </div>
+
+              {/* Price */}
+              <div style={{ marginBottom: 20 }}>
+                {plan.originalPrice && (
+                  <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, color: "#475569", textDecoration: "line-through", marginBottom: 2 }}>
+                    ₹{plan.originalPrice.toLocaleString("en-IN")}
+                  </div>
+                )}
+                <div style={{ display: "flex", alignItems: "flex-end", gap: 4 }}>
+                  <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 32, fontWeight: 800, color: plan.accent, lineHeight: 1 }}>
+                    ₹{plan.price.toLocaleString("en-IN")}
+                  </span>
+                  {plan.sessions > 1 && (
+                    <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 11, color: "#64748B", marginBottom: 4 }}>/ bundle</span>
+                  )}
+                </div>
+                {plan.sessions > 1 && (
+                  <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 11, color: "#64748B", marginTop: 3 }}>
+                    ₹{Math.round(plan.price / plan.sessions).toLocaleString("en-IN")} per session
+                  </div>
+                )}
+              </div>
+
+              {/* Divider */}
+              <div style={{ height: 1, background: "#334155", marginBottom: 18 }} />
+
+              {/* Highlights */}
+              <div style={{ flex: 1, marginBottom: 24 }}>
+                {plan.highlights.map((h, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 10 }}>
+                    <span style={{ color: plan.accent, fontSize: 13, marginTop: 1, flexShrink: 0 }}>✓</span>
+                    <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, color: "#94A3B8", lineHeight: 1.4 }}>{h}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* CTA */}
+              <button
+                onClick={onBookClick}
+                style={{
+                  width: "100%", padding: "13px 0", borderRadius: 10, cursor: "pointer",
+                  background: plan.badge === "MOST POPULAR" || plan.badge === "BEST VALUE"
+                    ? plan.accent : "transparent",
+                  border: plan.badge === "MOST POPULAR" || plan.badge === "BEST VALUE"
+                    ? "none" : "1.5px solid #C9A84C",
+                  color: plan.badge === "MOST POPULAR" || plan.badge === "BEST VALUE"
+                    ? "#fff" : "#C9A84C",
+                  fontFamily: "'Inter',sans-serif", fontSize: 14, fontWeight: 700,
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = plan.accent;
+                  e.target.style.color = "#fff";
+                  e.target.style.boxShadow = "0 4px 20px rgba(201,168,76,0.3)";
+                }}
+                onMouseLeave={(e) => {
+                  if (plan.badge === "MOST POPULAR" || plan.badge === "BEST VALUE") {
+                    e.target.style.background = plan.accent;
+                    e.target.style.color = "#fff";
+                  } else {
+                    e.target.style.background = "transparent";
+                    e.target.style.color = "#C9A84C";
+                  }
+                  e.target.style.boxShadow = "none";
+                }}
+              >
+                {plan.cta} →
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer note */}
+        <div style={{ textAlign: "center", marginTop: 36 }}>
+          <p style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, color: "#64748B" }}>
+            All sessions are 45 minutes · IST timezone · Confirmed within 24 hours of booking
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function FAQs() {
   const [ref, visible] = useScrollReveal(0.1);
   const [openIndex, setOpenIndex] = useState(0);
@@ -3257,6 +3492,7 @@ export default function MockNinja() {
       <Stats />
       <Mentors onBookClick={() => setShowBooking(true)} />
       <Testimonials />
+      <Pricing onBookClick={() => setShowBooking(true)} />
 
       <FAQs />
       <FinalCTA onBookClick={() => setShowBooking(true)} />
