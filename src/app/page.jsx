@@ -11,7 +11,7 @@ const LOGO_SRC = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA+cAAAH0CAYAAABf
 // ============================================================
 
 // --- Constants ---
-const NAV_LINKS = ["How It Works", "Mentors", "Why MockNinja", "Testimonials", "FAQs"];
+const NAV_LINKS = ["How It Works", "AI Evaluator", "Mentors", "Why MockNinja", "Testimonials", "FAQs"];
 
 const FOOTER_COLS = {
   Platform: ["How It Works", "Mentors", "Schools", "Testimonials", "Book Interview"],
@@ -1538,6 +1538,393 @@ const TESTIMONIALS = [
     rating: 5,
   },
 ];
+
+function ProfileEvaluator({ onBookClick }) {
+  const [ref, visible] = useScrollReveal(0.1);
+  const [evalStep, setEvalStep] = useState(0); // 0=CTA, 1-4=form steps, 5=loading, 6=results
+  const [evalForm, setEvalForm] = useState({
+    email: "", gender: "", age: "", gmat: "", gradPercent: "", stream: "", postGrad: "",
+    company: "", designation: "", industry: "", experience: "", teamSize: "", international: "", careerHighlight: "",
+    targetSchools: [], postMbaGoal: "", achievement: "",
+    sports: "No", research: "No", certifications: "", otherExtra: "",
+  });
+  const [evalResult, setEvalResult] = useState(null);
+  const [evalError, setEvalError] = useState(null);
+  const [otpCode, setOtpCode] = useState(["","","","","",""]);
+  const [otpToken, setOtpToken] = useState(null);
+  const [otpTimestamp, setOtpTimestamp] = useState(null);
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpError, setOtpError] = useState(null);
+  const [otpVerified, setOtpVerified] = useState(false);
+
+  const uf = (field, value) => setEvalForm(f => ({ ...f, [field]: value }));
+  const toggleSchool = (s) => setEvalForm(f => ({ ...f, targetSchools: f.targetSchools.includes(s) ? f.targetSchools.filter(x => x !== s) : [...f.targetSchools, s] }));
+
+  const canProceedEval = () => {
+    if (evalStep === 1) return evalForm.email && evalForm.gender && evalForm.age && evalForm.gmat && evalForm.gradPercent && evalForm.stream;
+    if (evalStep === 2) return evalForm.company && evalForm.designation && evalForm.industry && evalForm.experience && evalForm.teamSize;
+    if (evalStep === 3) return evalForm.targetSchools.length > 0 && evalForm.postMbaGoal;
+    return true;
+  };
+
+  const sendOtp = async () => {
+    setOtpSending(true);
+    setOtpError(null);
+    try {
+      const resp = await fetch("/api/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: evalForm.email }),
+      });
+      const data = await resp.json();
+      if (data.error) { setOtpError(data.error); return; }
+      setOtpToken(data.token);
+      setOtpTimestamp(data.timestamp);
+      setEvalStep(4.5);
+    } catch (e) {
+      setOtpError("Failed to send OTP. Please try again.");
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  const verifyOtp = async () => {
+    setOtpError(null);
+    const code = otpCode.join("");
+    if (code.length !== 6) { setOtpError("Enter the full 6-digit code."); return; }
+    try {
+      const resp = await fetch("/api/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: evalForm.email, otp: code, token: otpToken, timestamp: otpTimestamp }),
+      });
+      const data = await resp.json();
+      if (data.verified) {
+        setOtpVerified(true);
+        runEvaluation();
+      } else {
+        setOtpError(data.error || "Invalid OTP.");
+      }
+    } catch (e) {
+      setOtpError("Verification failed. Please try again.");
+    }
+  };
+
+  const handleOtpInput = (idx, val) => {
+    if (val.length > 1) val = val.slice(-1);
+    if (val && !/[0-9]/.test(val)) return;
+    const newCode = [...otpCode];
+    newCode[idx] = val;
+    setOtpCode(newCode);
+    if (val && idx < 5) {
+      const nextInput = document.getElementById("otp-" + (idx + 1));
+      if (nextInput) nextInput.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (idx, e) => {
+    if (e.key === "Backspace" && !otpCode[idx] && idx > 0) {
+      const prevInput = document.getElementById("otp-" + (idx - 1));
+      if (prevInput) prevInput.focus();
+    }
+  };
+
+  const runEvaluation = async () => {
+    setEvalStep(5);
+    setEvalError(null);
+    try {
+      const resp = await fetch("/api/evaluate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(evalForm),
+      });
+      const data = await resp.json();
+      const text = data.content ? data.content.map(function(b) { return b.text || ""; }).join("") : "";
+      const startIdx = text.indexOf("{");
+      const endIdx = text.lastIndexOf("}");
+      const parsed = JSON.parse(text.slice(startIdx, endIdx + 1));
+      setEvalResult(parsed);
+      setEvalStep(6);
+    } catch (e) {
+      setEvalError("Evaluation failed. Please try again.");
+      setEvalStep(4);
+    }
+  };
+
+  const colorMap = { green: "#10B981", emerald: "#34D399", gold: "#C9A84C", orange: "#F59E0B", red: "#EF4444" };
+  const labelColors = { "Very Strong": "#10B981", "Strong": "#34D399", "Competitive": "#C9A84C", "Stretch": "#F59E0B", "Unlikely": "#EF4444" };
+
+  const inputSty = { width: "100%", padding: "12px 14px", borderRadius: 10, border: "1px solid #334155", background: "#1A2A44", color: "#F5F5F0", fontFamily: "'Inter',sans-serif", fontSize: 14, outline: "none", boxSizing: "border-box" };
+  const labelSty = { fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 600, color: "#F5F5F0", marginBottom: 6, display: "block" };
+  const fieldWrap = { marginBottom: 16 };
+  const selectSty = { ...inputSty, cursor: "pointer", appearance: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394A3B8' d='M6 8L1 3h10z'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center" };
+
+  const INDUSTRIES = ["Consulting", "Banking & Finance", "FMCG", "Tech & SaaS", "E-commerce", "Healthcare & Pharma", "Manufacturing", "PE & VC", "Startup", "Energy & Oil Gas", "Telecom", "Government & PSU", "Other"];
+  const SCHOOLS = ["ISB", "IIM A PGPX", "IIM B EPGP", "IIM C PGPEX", "IIM L IPMX", "XLRI"];
+
+  return (
+    <section id="ai-evaluator" ref={ref} style={{ background: "#0F1B2D", padding: "80px 0", opacity: visible ? 1 : 0, transform: visible ? "none" : "translateY(30px)", transition: "all 0.6s ease" }}>
+      <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 24px" }}>
+
+        {/* CTA state */}
+        {evalStep === 0 && (
+          <div style={{ textAlign: "center" }}>
+            <div style={{ display: "inline-block", padding: "6px 18px", borderRadius: 20, border: "1px solid rgba(201,168,76,0.4)", background: "rgba(201,168,76,0.08)", fontFamily: "'Inter',sans-serif", fontSize: 12, fontWeight: 600, color: "#C9A84C", letterSpacing: "1.5px", marginBottom: 16 }}>FREE AI TOOL</div>
+            <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 38, fontWeight: 700, color: "#F5F5F0", marginBottom: 14, lineHeight: 1.2 }}>Know Your MBA Admission Chances</h2>
+            <p style={{ fontFamily: "'Inter',sans-serif", fontSize: 16, color: "#94A3B8", maxWidth: 480, margin: "0 auto 32px" }}>Get an instant, AI-powered readiness score for India's top 1-year MBA programs. Free. Takes 2 minutes.</p>
+            <button onClick={() => setEvalStep(1)} style={{ padding: "16px 40px", borderRadius: 12, border: "none", background: "#C9A84C", color: "#0F1B2D", fontFamily: "'Inter',sans-serif", fontSize: 16, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={e => { e.target.style.background = "#E0BF65"; e.target.style.boxShadow = "0 8px 32px rgba(201,168,76,0.3)"; }} onMouseLeave={e => { e.target.style.background = "#C9A84C"; e.target.style.boxShadow = "none"; }}>Check My Chances →</button>
+          </div>
+        )}
+
+        {/* Form Steps 1-4 */}
+        {evalStep >= 1 && evalStep <= 4 && (
+          <div style={{ background: "#1A2A44", borderRadius: 16, padding: "32px 28px", border: "1px solid #334155" }}>
+            {/* Progress */}
+            <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+              {[1,2,3,4].map(s => (<div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: s <= evalStep ? "#C9A84C" : "#334155", transition: "background 0.3s" }} />))}
+            </div>
+            <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 12, color: "#94A3B8", marginBottom: 24 }}>
+              Step {evalStep} of 4 — {["","Basic & Academic","Professional Profile","MBA Goals","Extracurriculars"][evalStep]}
+            </div>
+
+            {/* STEP 1 */}
+            {evalStep === 1 && (
+              <div>
+                <div style={fieldWrap}><label style={labelSty}>Email Address *</label><input style={inputSty} placeholder="you@email.com" value={evalForm.email} onChange={e => uf("email", e.target.value)} /></div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={fieldWrap}><label style={labelSty}>Gender *</label><select style={selectSty} value={evalForm.gender} onChange={e => uf("gender", e.target.value)}><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option><option>Prefer not to say</option></select></div>
+                  <div style={fieldWrap}><label style={labelSty}>Age *</label><input style={inputSty} type="number" placeholder="e.g. 28" value={evalForm.age} onChange={e => uf("age", e.target.value)} /></div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={fieldWrap}><label style={labelSty}>GMAT Score *</label><input style={inputSty} type="number" placeholder="e.g. 710" value={evalForm.gmat} onChange={e => uf("gmat", e.target.value)} /></div>
+                  <div style={fieldWrap}><label style={labelSty}>Graduation % or CGPA *</label><input style={inputSty} placeholder="e.g. 78 or 8.2" value={evalForm.gradPercent} onChange={e => uf("gradPercent", e.target.value)} /></div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={fieldWrap}><label style={labelSty}>Undergraduate Stream *</label><select style={selectSty} value={evalForm.stream} onChange={e => uf("stream", e.target.value)}><option value="">Select</option><option>Engineering</option><option>Commerce</option><option>Science</option><option>Arts</option><option>Medicine</option><option>Law</option><option>CA</option><option>Other</option></select></div>
+                  <div style={fieldWrap}><label style={labelSty}>Post-Graduate Degree</label><select style={selectSty} value={evalForm.postGrad} onChange={e => uf("postGrad", e.target.value)}><option value="">None</option><option>MBA</option><option>MS</option><option>CA</option><option>CFA</option><option>PhD</option><option>Law</option><option>Other</option></select></div>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 2 */}
+            {evalStep === 2 && (
+              <div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={fieldWrap}><label style={labelSty}>Current Company *</label><input style={inputSty} placeholder="e.g. Accenture" value={evalForm.company} onChange={e => uf("company", e.target.value)} /></div>
+                  <div style={fieldWrap}><label style={labelSty}>Current Designation *</label><input style={inputSty} placeholder="e.g. Senior Manager" value={evalForm.designation} onChange={e => uf("designation", e.target.value)} /></div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={fieldWrap}><label style={labelSty}>Industry *</label><select style={selectSty} value={evalForm.industry} onChange={e => uf("industry", e.target.value)}><option value="">Select</option>{INDUSTRIES.map(i => <option key={i}>{i}</option>)}</select></div>
+                  <div style={fieldWrap}><label style={labelSty}>Work Experience (years) *</label><input style={inputSty} type="number" placeholder="e.g. 6" value={evalForm.experience} onChange={e => uf("experience", e.target.value)} /></div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={fieldWrap}><label style={labelSty}>People Managed *</label><select style={selectSty} value={evalForm.teamSize} onChange={e => uf("teamSize", e.target.value)}><option value="">Select</option><option>0</option><option>1-3</option><option>4-10</option><option>10-25</option><option>25+</option></select></div>
+                  <div style={fieldWrap}><label style={labelSty}>International Exposure</label><select style={selectSty} value={evalForm.international} onChange={e => uf("international", e.target.value)}><option value="">None</option><option>Short assignments abroad</option><option>Worked abroad (1+ yr)</option><option>Studied abroad</option><option>Both worked and studied</option></select></div>
+                </div>
+                <div style={fieldWrap}><label style={labelSty}>Career Highlight</label><input style={inputSty} placeholder="e.g. Led ₹200Cr revenue vertical" value={evalForm.careerHighlight} onChange={e => uf("careerHighlight", e.target.value)} /><div style={{ fontFamily: "'Inter',sans-serif", fontSize: 11, color: "#64748B", marginTop: 4 }}>One line that defines your career so far</div></div>
+              </div>
+            )}
+
+            {/* STEP 3 */}
+            {evalStep === 3 && (
+              <div>
+                <div style={fieldWrap}>
+                  <label style={labelSty}>Target Schools *</label>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {SCHOOLS.map(s => {
+                      const sel = evalForm.targetSchools.includes(s);
+                      return (<div key={s} onClick={() => toggleSchool(s)} style={{ padding: "8px 16px", borderRadius: 20, cursor: "pointer", border: sel ? "1.5px solid #C9A84C" : "1px solid #334155", background: sel ? "rgba(201,168,76,0.12)" : "transparent", color: sel ? "#C9A84C" : "#94A3B8", fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 500, transition: "all 0.2s" }}>{s}</div>);
+                    })}
+                  </div>
+                </div>
+                <div style={fieldWrap}><label style={labelSty}>Post-MBA Goal *</label><input style={inputSty} placeholder="e.g. Transition to product leadership in a tech company" value={evalForm.postMbaGoal} onChange={e => uf("postMbaGoal", e.target.value)} /></div>
+                <div style={fieldWrap}><label style={labelSty}>Biggest Achievement in Workplace</label><input style={inputSty} placeholder="e.g. Led cross-border digital transformation for 5 markets" value={evalForm.achievement} onChange={e => uf("achievement", e.target.value)} /></div>
+              </div>
+            )}
+
+            {/* STEP 4 */}
+            {evalStep === 4 && (
+              <div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={fieldWrap}><label style={labelSty}>Sports/Music/Arts at national/international level?</label><select style={selectSty} value={evalForm.sports} onChange={e => uf("sports", e.target.value)}><option>No</option><option>Yes</option></select></div>
+                  <div style={fieldWrap}><label style={labelSty}>Published research, patents or thought leadership?</label><select style={selectSty} value={evalForm.research} onChange={e => uf("research", e.target.value)}><option>No</option><option>Yes</option></select></div>
+                </div>
+                <div style={fieldWrap}><label style={labelSty}>Certifications</label><input style={inputSty} placeholder="e.g. CFA Level 2, AWS Solutions Architect, PMP" value={evalForm.certifications} onChange={e => uf("certifications", e.target.value)} /></div>
+                <div style={fieldWrap}><label style={labelSty}>Anything else noteworthy?</label><input style={inputSty} placeholder="Optional — anything that makes you stand out" value={evalForm.otherExtra} onChange={e => uf("otherExtra", e.target.value)} /><div style={{ fontFamily: "'Inter',sans-serif", fontSize: 11, color: "#64748B", marginTop: 4 }}>Marathon runner, TEDx speaker, startup founder, etc.</div></div>
+                {evalError && <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 14, color: "#EF4444", marginTop: 8, textAlign: "center" }}>{evalError}</div>}
+              </div>
+            )}
+
+            {/* Navigation */}
+            <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+              {evalStep > 1 && (<button onClick={() => setEvalStep(evalStep - 1)} style={{ padding: "12px 24px", borderRadius: 10, border: "1px solid #334155", background: "transparent", color: "#94A3B8", fontFamily: "'Inter',sans-serif", fontSize: 14, cursor: "pointer" }}>← Back</button>)}
+              {evalStep < 4 && (
+                <button onClick={() => { if (canProceedEval()) setEvalStep(evalStep + 1); }} style={{ flex: 1, padding: "13px 0", borderRadius: 10, border: "none", background: canProceedEval() ? "#C9A84C" : "#334155", color: canProceedEval() ? "#0F1B2D" : "#64748B", fontFamily: "'Inter',sans-serif", fontSize: 14, fontWeight: 700, cursor: canProceedEval() ? "pointer" : "not-allowed", transition: "all 0.2s" }}>Next →</button>
+              )}
+              {evalStep === 4 && (
+                <button onClick={sendOtp} disabled={otpSending} style={{ flex: 1, padding: "13px 0", borderRadius: 10, border: "none", background: otpSending ? "#334155" : "#C9A84C", color: otpSending ? "#64748B" : "#0F1B2D", fontFamily: "'Inter',sans-serif", fontSize: 15, fontWeight: 700, cursor: otpSending ? "wait" : "pointer", transition: "all 0.2s" }} onMouseEnter={e => { if (!otpSending) { e.target.style.background = "#E0BF65"; e.target.style.boxShadow = "0 8px 32px rgba(201,168,76,0.3)"; } }} onMouseLeave={e => { e.target.style.background = otpSending ? "#334155" : "#C9A84C"; e.target.style.boxShadow = "none"; }}>{otpSending ? "Sending code..." : "Evaluate My Profile ✦"}</button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* OTP VERIFICATION */}
+        {evalStep === 4.5 && (
+          <div style={{ background: "#1A2A44", borderRadius: 16, padding: "40px 28px", border: "1px solid #334155", textAlign: "center" }}>
+            <div style={{ fontSize: 40, marginBottom: 16 }}>📧</div>
+            <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, fontWeight: 700, color: "#F5F5F0", marginBottom: 8 }}>Verify Your Email</h3>
+            <p style={{ fontFamily: "'Inter',sans-serif", fontSize: 14, color: "#94A3B8", marginBottom: 28 }}>
+              We sent a 6-digit code to <span style={{ color: "#C9A84C", fontWeight: 600 }}>{evalForm.email}</span>
+            </p>
+
+            {/* OTP Input Boxes */}
+            <div style={{ display: "flex", justifyContent: "center", gap: 10, marginBottom: 24 }}>
+              {[0,1,2,3,4,5].map(i => (
+                <input
+                  key={i}
+                  id={"otp-" + i}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={otpCode[i]}
+                  onChange={e => handleOtpInput(i, e.target.value)}
+                  onKeyDown={e => handleOtpKeyDown(i, e)}
+                  style={{
+                    width: 48, height: 56, textAlign: "center", borderRadius: 10,
+                    border: otpCode[i] ? "2px solid #C9A84C" : "1px solid #334155",
+                    background: "#0F1B2D", color: "#F5F5F0",
+                    fontFamily: "'Inter',sans-serif", fontSize: 24, fontWeight: 700,
+                    outline: "none", transition: "border 0.2s",
+                  }}
+                  onFocus={e => { e.target.style.borderColor = "#C9A84C"; }}
+                  onBlur={e => { if (!otpCode[i]) e.target.style.borderColor = "#334155"; }}
+                />
+              ))}
+            </div>
+
+            {otpError && <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, color: "#EF4444", marginBottom: 16 }}>{otpError}</div>}
+
+            <button onClick={verifyOtp} style={{ width: "100%", maxWidth: 300, padding: "14px 0", borderRadius: 10, border: "none", background: "#C9A84C", color: "#0F1B2D", fontFamily: "'Inter',sans-serif", fontSize: 15, fontWeight: 700, cursor: "pointer", transition: "all 0.2s", marginBottom: 16 }} onMouseEnter={e => { e.target.style.background = "#E0BF65"; }} onMouseLeave={e => { e.target.style.background = "#C9A84C"; }}>Verify & Get Results</button>
+
+            <div style={{ display: "flex", justifyContent: "center", gap: 24 }}>
+              <button onClick={sendOtp} style={{ background: "transparent", border: "none", color: "#C9A84C", fontFamily: "'Inter',sans-serif", fontSize: 13, cursor: "pointer", textDecoration: "underline" }}>Resend Code</button>
+              <button onClick={() => { setEvalStep(1); setOtpCode(["","","","","",""]); }} style={{ background: "transparent", border: "none", color: "#64748B", fontFamily: "'Inter',sans-serif", fontSize: 13, cursor: "pointer", textDecoration: "underline" }}>Change Email</button>
+            </div>
+          </div>
+        )}
+
+        {/* LOADING */}
+        {evalStep === 5 && (
+          <div style={{ background: "#1A2A44", borderRadius: 16, padding: "40px 28px", border: "1px solid #334155", textAlign: "center" }}>
+            <div style={{ position: "relative", width: 72, height: 72, margin: "0 auto 24px" }}>
+              <div style={{ width: 72, height: 72, borderRadius: "50%", border: "3px solid #1A2A44", borderTop: "3px solid #C9A84C", animation: "spin 1s linear infinite", position: "absolute", inset: 0 }} />
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>✦</div>
+            </div>
+            <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, fontWeight: 700, color: "#F5F5F0", marginBottom: 8 }}>Analyzing your profile...</div>
+            <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, color: "#94A3B8", marginBottom: 28 }}>Our AI is evaluating against real admission patterns</div>
+            {["Parsing academic credentials", "Evaluating work experience quality", "Assessing leadership signals", "Checking profile diversity factors", "Matching against school preferences", "Generating your readiness report"].map((label, i) => (
+              <div key={i} style={{ marginBottom: 12, textAlign: "left" }}>
+                <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 12, color: "#94A3B8", marginBottom: 4 }}>{label}</div>
+                <div style={{ height: 4, background: "#0F1B2D", borderRadius: 2, overflow: "hidden" }}>
+                  <div style={{ height: "100%", borderRadius: 2, background: "linear-gradient(90deg, #C9A84C, #E0BF65)", animation: "growBar " + (1.2 + i * 0.6) + "s ease forwards", width: 0 }} />
+                </div>
+              </div>
+            ))}
+            <style>{"@keyframes growBar { to { width: 100%; } } @keyframes spin { to { transform: rotate(360deg); } }"}</style>
+          </div>
+        )}
+
+        {/* RESULTS */}
+        {evalStep === 6 && evalResult && (
+          <div style={{ animation: "fadeIn 0.5s ease" }}>
+            {/* Header */}
+            <div style={{ textAlign: "center", marginBottom: 28 }}>
+              <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 12, color: "#C9A84C", letterSpacing: "1.5px", fontWeight: 600, marginBottom: 8 }}>YOUR RESULTS</div>
+              <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 30, fontWeight: 700, color: "#F5F5F0", marginBottom: 6 }}>1-Year MBA Readiness Report</h2>
+              <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 12, color: "#64748B" }}>Generated {new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</div>
+            </div>
+
+            {/* Overall Score Card */}
+            <div style={{ background: "#1A2A44", borderRadius: 16, padding: "28px", border: "1px solid #334155", textAlign: "center", marginBottom: 20 }}>
+              <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, color: "#94A3B8", marginBottom: 12 }}>Overall Profile Score</div>
+              <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 56, fontWeight: 800, color: "#C9A84C", lineHeight: 1 }}>{evalResult.overallScore}</div>
+              <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 14, color: "#64748B", marginBottom: 16 }}>/ 100</div>
+              <div style={{ height: 8, background: "#0F1B2D", borderRadius: 4, overflow: "hidden", maxWidth: 300, margin: "0 auto 12px" }}>
+                <div style={{ height: "100%", borderRadius: 4, background: evalResult.overallScore >= 75 ? "linear-gradient(90deg, #10B981, #34D399)" : evalResult.overallScore >= 60 ? "linear-gradient(90deg, #C9A84C, #E0BF65)" : "linear-gradient(90deg, #F59E0B, #FBBF24)", width: evalResult.overallScore + "%", transition: "width 1s ease" }} />
+              </div>
+              <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 16, fontWeight: 700, color: evalResult.overallScore >= 75 ? "#10B981" : evalResult.overallScore >= 60 ? "#C9A84C" : "#F59E0B" }}>{evalResult.overallLabel}</div>
+            </div>
+
+            {/* Pillar Scores */}
+            <div style={{ background: "#1A2A44", borderRadius: 16, padding: "24px 28px", border: "1px solid #334155", marginBottom: 20 }}>
+              <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 14, fontWeight: 700, color: "#F5F5F0", marginBottom: 18 }}>PILLAR SCORES</div>
+              {evalResult.pillars && evalResult.pillars.map((p, i) => (
+                <div key={i} style={{ marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                    <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, color: "#94A3B8" }}>{p.name}</span>
+                    <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 700, color: p.score >= 8 ? "#10B981" : p.score >= 6 ? "#C9A84C" : "#F59E0B" }}>{p.score}/10</span>
+                  </div>
+                  <div style={{ height: 6, background: "#0F1B2D", borderRadius: 3, overflow: "hidden" }}>
+                    <div style={{ height: "100%", borderRadius: 3, background: p.score >= 8 ? "#10B981" : p.score >= 6 ? "#C9A84C" : "#F59E0B", width: (p.score * 10) + "%", transition: "width 0.8s ease " + (i * 0.1) + "s" }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Admission Chances */}
+            <div style={{ background: "#1A2A44", borderRadius: 16, padding: "24px 28px", border: "1px solid #334155", marginBottom: 20 }}>
+              <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 14, fontWeight: 700, color: "#F5F5F0", marginBottom: 18 }}>YOUR ADMISSION CHANCES</div>
+              {evalResult.tierChances && evalResult.tierChances.map((t, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", borderBottom: i < evalResult.tierChances.length - 1 ? "1px solid #334155" : "none" }}>
+                  <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 14, color: "#F5F5F0" }}>{t.tier}</span>
+                  <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 700, color: labelColors[t.label] || "#94A3B8", padding: "4px 14px", borderRadius: 20, background: "rgba(" + (t.label === "Very Strong" || t.label === "Strong" ? "16,185,129" : t.label === "Competitive" ? "201,168,76" : t.label === "Stretch" ? "245,158,11" : "239,68,68") + ",0.12)" }}>{t.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Strengths */}
+            <div style={{ background: "#1A2A44", borderRadius: 16, padding: "24px 28px", border: "1px solid #334155", marginBottom: 20 }}>
+              <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 14, fontWeight: 700, color: "#10B981", marginBottom: 14 }}>YOUR STRENGTHS</div>
+              {evalResult.strengths && evalResult.strengths.map((s, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                  <span style={{ color: "#10B981", flexShrink: 0 }}>✅</span>
+                  <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, color: "#94A3B8", lineHeight: 1.5 }}>{s}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Gaps */}
+            <div style={{ background: "#1A2A44", borderRadius: 16, padding: "24px 28px", border: "1px solid #334155", marginBottom: 20 }}>
+              <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 14, fontWeight: 700, color: "#F59E0B", marginBottom: 14 }}>AREAS TO STRENGTHEN</div>
+              {evalResult.gaps && evalResult.gaps.map((g, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                  <span style={{ color: "#F59E0B", flexShrink: 0 }}>⚠️</span>
+                  <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, color: "#94A3B8", lineHeight: 1.5 }}>{g}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Verdict */}
+            <div style={{ background: "rgba(201,168,76,0.06)", borderRadius: 16, padding: "24px 28px", border: "1px solid rgba(201,168,76,0.2)", marginBottom: 28 }}>
+              <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 14, fontWeight: 700, color: "#C9A84C", marginBottom: 10 }}>VERDICT</div>
+              <p style={{ fontFamily: "'Inter',sans-serif", fontSize: 14, color: "#F5F5F0", lineHeight: 1.7, margin: 0 }}>{evalResult.verdict}</p>
+            </div>
+
+            {/* CTA */}
+            <div style={{ textAlign: "center", padding: "24px 0" }}>
+              <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, fontWeight: 700, color: "#F5F5F0", marginBottom: 8 }}>Want to convert these chances into an actual offer?</h3>
+              <p style={{ fontFamily: "'Inter',sans-serif", fontSize: 14, color: "#94A3B8", marginBottom: 24 }}>Practice with an alumnus from your target school. AI-matched. Real feedback.</p>
+              <button onClick={onBookClick} style={{ padding: "15px 36px", borderRadius: 12, border: "none", background: "#C9A84C", color: "#0F1B2D", fontFamily: "'Inter',sans-serif", fontSize: 15, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={e => { e.target.style.background = "#E0BF65"; e.target.style.boxShadow = "0 8px 32px rgba(201,168,76,0.3)"; }} onMouseLeave={e => { e.target.style.background = "#C9A84C"; e.target.style.boxShadow = "none"; }}>Book a Mock Interview →</button>
+              <div style={{ marginTop: 16 }}>
+                <button onClick={() => { setEvalStep(0); setEvalResult(null); }} style={{ background: "transparent", border: "none", color: "#64748B", fontFamily: "'Inter',sans-serif", fontSize: 13, cursor: "pointer", textDecoration: "underline" }}>Evaluate another profile</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
 
 function Testimonials() {
   const [ref, visible] = useScrollReveal(0.15);
@@ -3487,6 +3874,7 @@ export default function MockNinja() {
       <HowItWorks />
 
       <Stats />
+      <ProfileEvaluator onBookClick={() => setShowBooking(true)} />
       <Mentors onBookClick={() => setShowBooking(true)} />
       <Testimonials />
 
