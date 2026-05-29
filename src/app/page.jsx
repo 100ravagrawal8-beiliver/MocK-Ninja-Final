@@ -1279,7 +1279,7 @@ function Mentors({ onBookClick }) {
             const exp = iv["Total Work Experience (in years)"] || "";
             const photoRaw = iv["Professional Photo (In case not available, will take it from Linkedin)"] || "";
             const photoId = photoRaw.includes("id=") ? photoRaw.split("id=")[1] : null;
-            const photoUrl = photoId ? "https://drive.google.com/uc?export=view&id=" + photoId : null;
+            const photoUrl = photoId ? "https://drive.google.com/thumbnail?id=" + photoId + "&sz=w200" : null;
             const mockExp = iv["Years of Mock Interview Experience"] || "";
             const mockCount = iv["Approximate Number of Mock Interviews Conducted"] || "";
             const prevCompanies = iv["Previous Companies (Top 3)"] || "";
@@ -1410,7 +1410,7 @@ function Mentors({ onBookClick }) {
               {/* Avatar */}
               <div style={{ width: 56, height: 56, borderRadius: "50%", marginBottom: 16, border: "2px solid #C9A84C", overflow: "hidden", background: "linear-gradient(135deg, #0F1B2D 0%, #1A2A44 100%)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 {mentor.photoUrl ? (
-                  <img src={mentor.photoUrl} alt={mentor.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { e.target.style.display = "none"; }} />
+                  <img src={mentor.photoUrl} alt={mentor.name} referrerPolicy="no-referrer" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { e.target.style.display = "none"; e.target.nextSibling && (e.target.nextSibling.style.display = "flex"); }} />
                 ) : (
                   <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 18, fontWeight: 700, color: "#C9A84C" }}>{mentor.initials}</span>
                 )}
