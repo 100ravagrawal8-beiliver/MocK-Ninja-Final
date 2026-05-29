@@ -11,7 +11,7 @@ const LOGO_SRC = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA+cAAAH0CAYAAABf
 // ============================================================
 
 // --- Constants ---
-const NAV_LINKS = ["How It Works", "Mentors", "Why MockNinja", "Pricing", "Testimonials", "FAQs"];
+const NAV_LINKS = ["How It Works", "Mentors", "Why MockNinja", "Testimonials", "FAQs"];
 
 const FOOTER_COLS = {
   Platform: ["How It Works", "Mentors", "Schools", "Testimonials", "Book Interview"],
@@ -1280,8 +1280,8 @@ function Mentors({ onBookClick }) {
             const photoRaw = iv["Professional Photo (In case not available, will take it from Linkedin)"] || "";
             const photoId = photoRaw.includes("id=") ? photoRaw.split("id=")[1] : null;
             const photoUrl = photoId ? "https://drive.google.com/thumbnail?id=" + photoId + "&sz=w200" : null;
-            const mockExp = iv["Years of Mock Interview Experience"] || "";
-            const mockCount = iv["Approximate Number of Mock Interviews Conducted"] || "";
+            const mockExp = iv["Mock interview experience (in years)"] || "";
+            const mockCount = iv["Approximate number of mocks conducted to date"] || "";
             const prevCompanies = iv["Previous Companies (Top 3)"] || "";
             return {
               name,
@@ -3489,7 +3489,6 @@ export default function MockNinja() {
       <Stats />
       <Mentors onBookClick={() => setShowBooking(true)} />
       <Testimonials />
-      <Pricing onBookClick={() => setShowBooking(true)} />
 
       <FAQs />
       <FinalCTA onBookClick={() => setShowBooking(true)} />
