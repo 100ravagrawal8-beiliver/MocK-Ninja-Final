@@ -1257,56 +1257,7 @@ function Stats() {
 // ============================================================
 // MENTOR / INTERVIEWER PROFILES
 // ============================================================
-const MENTORS = [
-  {
-    name: "Rajesh Mehta",
-    credential: "IIM Ahmedabad '16 | McKinsey | 12 yrs exp",
-    tags: ["Strategy", "IIM A", "IIM B"],
-    rating: 4.9,
-    sessions: 85,
-    initials: "RM",
-  },
-  {
-    name: "Priya Kapoor",
-    credential: "ISB '18 | BCG | 9 yrs exp",
-    tags: ["Operations", "ISB", "IIM C"],
-    rating: 4.8,
-    sessions: 62,
-    initials: "PK",
-  },
-  {
-    name: "Amit Sharma",
-    credential: "IIM Bangalore '14 | Bain | 14 yrs exp",
-    tags: ["Finance", "IIM B", "IIM L"],
-    rating: 5.0,
-    sessions: 110,
-    initials: "AS",
-  },
-  {
-    name: "Neha Reddy",
-    credential: "IIM Calcutta '17 | Deloitte | 10 yrs exp",
-    tags: ["Marketing", "IIM C", "IIM K"],
-    rating: 4.9,
-    sessions: 73,
-    initials: "NR",
-  },
-  {
-    name: "Vikram Joshi",
-    credential: "XLRI '15 | Goldman Sachs | 11 yrs exp",
-    tags: ["HR", "XLRI", "IIM I"],
-    rating: 4.7,
-    sessions: 54,
-    initials: "VJ",
-  },
-  {
-    name: "Sneha Iyer",
-    credential: "IIM Indore '19 | Amazon | 7 yrs exp",
-    tags: ["Product", "IIM I", "ISB"],
-    rating: 4.8,
-    sessions: 41,
-    initials: "SI",
-  },
-];
+const MENTORS = [];
 
 function Mentors({ onBookClick }) {
   const [ref, visible] = useScrollReveal(0.1);
@@ -1329,18 +1280,23 @@ function Mentors({ onBookClick }) {
             const photoRaw = iv["Professional Photo (In case not available, will take it from Linkedin)"] || "";
             const photoId = photoRaw.includes("id=") ? photoRaw.split("id=")[1] : null;
             const photoUrl = photoId ? "https://drive.google.com/uc?export=view&id=" + photoId : null;
-            const tags = iv["tags"] ? iv["tags"].split(",").map(t => t.trim()) : [school, industry, fn].filter(Boolean);
+            const mockExp = iv["Years of Mock Interview Experience"] || "";
+            const mockCount = iv["Approximate Number of Mock Interviews Conducted"] || "";
+            const prevCompanies = iv["Previous Companies (Top 3)"] || "";
             return {
               name,
               credential: school + " | " + company + " | " + exp + " yrs exp",
-              tags: tags.slice(0, 3),
-              rating: parseFloat(iv["rating"]) || 4.8,
-              sessions: parseInt(iv["sessions"]) || 0,
-              initials: name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase(),
-              photoUrl,
+              tags: [school, industry, fn].filter(Boolean).slice(0, 3),
               industry,
               company,
               school,
+              fn,
+              exp,
+              mockExp,
+              mockCount,
+              prevCompanies,
+              initials: name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase(),
+              photoUrl,
             };
           });
           setLiveMentors(mapped);
@@ -1508,21 +1464,18 @@ function Mentors({ onBookClick }) {
                 ))}
               </div>
 
-              {/* Rating + Sessions */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: 14,
-                }}
-              >
-                <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, color: "#0F1B2D", fontWeight: 500 }}>
-                  ⭐ {mentor.rating}
-                </span>
-                <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, color: "#94A3B8" }}>
-                  {mentor.sessions} sessions
-                </span>
+              {/* Experience info */}
+              <div style={{ marginBottom: 14 }}>
+                {mentor.mockExp && (
+                  <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 12, color: "#64748B", marginBottom: 3 }}>
+                    Mock exp: <span style={{ color: "#0F1B2D", fontWeight: 500 }}>{mentor.mockExp}</span>
+                  </div>
+                )}
+                {mentor.mockCount && (
+                  <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 12, color: "#64748B" }}>
+                    Mocks conducted: <span style={{ color: "#0F1B2D", fontWeight: 500 }}>{mentor.mockCount}</span>
+                  </div>
+                )}
               </div>
 
               {/* Book link */}
