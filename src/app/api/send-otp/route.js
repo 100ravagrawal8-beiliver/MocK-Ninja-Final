@@ -23,7 +23,7 @@ export async function POST(request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "MockNinja AI <onboarding@resend.dev>",
+        from: "MockNinja AI <verify@mockninja.co.in>",
         to: [email],
         subject: "Your MockNinja Verification Code: " + otp,
         html: '<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#0F1B2D;color:#F5F5F0;border-radius:16px">' +
